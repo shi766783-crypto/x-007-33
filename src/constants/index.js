@@ -75,5 +75,4 @@ export const FOOD_GROUPS = {
 // 保质期预警阈值（天）
 export const EXPIRY_WARN_DAYS = 3
 
-// 挑战完成奖励积分
-export const CHALLENGE_POINTS = 10
+// 注：清理挑战积分按食材紧急程度动态计算，规则见 src/utils/challenge.js

@@ -2,13 +2,14 @@ import { defineStore } from 'pinia'
 import { read, write } from '@/utils/storage'
 import { uid } from '@/utils/id'
 import { useUserStore } from './user'
-import { CHALLENGE_POINTS } from '@/constants'
+import { challengePoints } from '@/utils/challenge'
 
 const KEY = 'challenges'
 
 export const useChallengeStore = defineStore('challenge', {
   state: () => ({
-    completed: read(KEY, []), // [{ id, ingredientId, ingredientName, dishName, points, date }]
+    completed: read(KEY, []),
+    // [{ id, ingredientId, ingredientName, dishName, points, pointsReason, pointsLevel, remain, date }]
   }),
 
   getters: {
@@ -24,18 +25,23 @@ export const useChallengeStore = defineStore('challenge', {
       write(KEY, this.completed)
     },
 
-    complete({ ingredientId, ingredientName, dishName }) {
+    // remain：完成时该食材的剩余保质期天数（负数=已过期天数），用于确定积分档位
+    complete({ ingredientId, ingredientName, dishName, remain }) {
       const user = useUserStore()
+      const reward = challengePoints(remain)
       const record = {
         id: uid('ch'),
         ingredientId,
         ingredientName,
         dishName,
-        points: CHALLENGE_POINTS,
+        points: reward.points,
+        pointsReason: reward.reason,
+        pointsLevel: reward.level,
+        remain: Number.isNaN(Number(remain)) ? null : Number(remain),
         date: new Date().toISOString(),
       }
       this.completed.unshift(record)
-      user.addPoints(CHALLENGE_POINTS)
+      user.addPoints(reward.points)
       this.persist()
       return record
     },
