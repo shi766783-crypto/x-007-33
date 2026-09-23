@@ -75,5 +75,16 @@ export const FOOD_GROUPS = {
 // 保质期预警阈值（天）
 export const EXPIRY_WARN_DAYS = 3
 
-// 挑战完成奖励积分
+// 挑战完成基础积分
 export const CHALLENGE_POINTS = 10
+
+// 清理挑战紧急度加成：按剩余保质期天数 remain 分档（remain < 0 表示已过期天数）
+// 命中规则：从上到下取第一个 remain >= minRemain 的档位
+export const CHALLENGE_URGENCY_TIERS = [
+  { minRemain: 2, bonus: 0, label: '临期清理', desc: '剩2-3天' },
+  { minRemain: 1, bonus: 5, label: '即将过期', desc: '剩1天' },
+  { minRemain: 0, bonus: 10, label: '今日过期', desc: '今天过期' },
+  { minRemain: -3, bonus: 15, label: '过期清理', desc: '过期1-3天' },
+  { minRemain: -7, bonus: 25, label: '过期一周', desc: '过期4-7天' },
+  { minRemain: -Infinity, bonus: 40, label: '过期超一周', desc: '过期8天+' },
+]

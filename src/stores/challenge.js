@@ -2,13 +2,14 @@ import { defineStore } from 'pinia'
 import { read, write } from '@/utils/storage'
 import { uid } from '@/utils/id'
 import { useUserStore } from './user'
-import { CHALLENGE_POINTS } from '@/constants'
+import { challengeReward } from '@/utils/challenge'
 
 const KEY = 'challenges'
 
 export const useChallengeStore = defineStore('challenge', {
   state: () => ({
-    completed: read(KEY, []), // [{ id, ingredientId, ingredientName, dishName, points, date }]
+    // [{ id, ingredientId, ingredientName, dishName, points, bonus, urgencyLabel, date }]
+    completed: read(KEY, []),
   }),
 
   getters: {
@@ -24,18 +25,21 @@ export const useChallengeStore = defineStore('challenge', {
       write(KEY, this.completed)
     },
 
-    complete({ ingredientId, ingredientName, dishName }) {
+    complete({ ingredientId, ingredientName, dishName, remain }) {
       const user = useUserStore()
+      const reward = challengeReward(remain)
       const record = {
         id: uid('ch'),
         ingredientId,
         ingredientName,
         dishName,
-        points: CHALLENGE_POINTS,
+        points: reward.points,
+        bonus: reward.bonus,
+        urgencyLabel: reward.label,
         date: new Date().toISOString(),
       }
       this.completed.unshift(record)
-      user.addPoints(CHALLENGE_POINTS)
+      user.addPoints(reward.points)
       this.persist()
       return record
     },

@@ -4,7 +4,8 @@ import { useInventoryStore } from '@/stores/inventory'
 import { useChallengeStore } from '@/stores/challenge'
 import { useMealPlanStore } from '@/stores/mealPlan'
 import { useUserStore } from '@/stores/user'
-import { CHALLENGE_POINTS } from '@/constants'
+import { CHALLENGE_POINTS, CHALLENGE_URGENCY_TIERS } from '@/constants'
+import { challengeReward } from '@/utils/challenge'
 import BaseButton from '@/components/common/BaseButton.vue'
 import BaseEmpty from '@/components/common/BaseEmpty.vue'
 import { expiryDateKey } from '@/utils/date'
@@ -22,6 +23,16 @@ const candidates = computed(() =>
   [...inventory.nearExpiryItems, ...inventory.expiredItems].sort((a, b) => a.remain - b.remain),
 )
 
+// 规则说明文案：由分档表生成（如 剩1天+5 · 今天过期+10 · …）
+const ruleText = CHALLENGE_URGENCY_TIERS.filter((t) => t.bonus > 0)
+  .map((t) => `${t.desc}+${t.bonus}`)
+  .join(' · ')
+
+// 食材当前可得的挑战奖励 { points, bonus, label }
+function rewardFor(item) {
+  return challengeReward(item.remain)
+}
+
 function complete(item) {
   const dishName = pickedDish[item.id]
   if (!dishName || !dishName.trim()) {
@@ -32,6 +43,7 @@ function complete(item) {
     ingredientId: item.id,
     ingredientName: item.name,
     dishName: dishName.trim(),
+    remain: item.remain,
   })
   delete pickedDish[item.id]
 }
@@ -49,7 +61,9 @@ function fmt(iso) {
       <span class="points-chip">⭐ 当前积分 {{ user.points }}</span>
     </div>
 
-    <p class="muted">选择临期/过期食材，做一道菜吃掉它，完成后打卡获得 <b>{{ CHALLENGE_POINTS }} 积分</b>！</p>
+    <p class="muted">
+      选择临期/过期食材，做一道菜吃掉它！完成打卡基础 <b>{{ CHALLENGE_POINTS }} 积分</b>，越紧急加成越高：{{ ruleText }}
+    </p>
 
     <BaseEmpty v-if="!candidates.length" emoji="🧊" text="没有需要清理的临期/过期食材，冰箱很干净！" />
 
@@ -65,6 +79,7 @@ function fmt(iso) {
               <span :style="{ color: item.status === 'expired' ? '#ef5350' : '#ff9800' }">
                 {{ item.status === 'expired' ? `已过期 ${Math.abs(item.remain)} 天` : `剩 ${item.remain} 天` }}
               </span>
+              <span class="reward-tag">🎁 {{ rewardFor(item).label }} +{{ rewardFor(item).points }}分</span>
             </div>
           </div>
         </div>
@@ -77,7 +92,7 @@ function fmt(iso) {
             </select>
             <input v-model="pickedDish[item.id]" type="text" placeholder="或输入新菜名" />
           </div>
-          <BaseButton block @click="complete(item)">✅ 完成打卡 +{{ CHALLENGE_POINTS }}积分</BaseButton>
+          <BaseButton block @click="complete(item)">✅ 完成打卡 +{{ rewardFor(item).points }}积分</BaseButton>
         </template>
         <div v-else class="done">🎉 已清理</div>
       </div>
@@ -88,7 +103,10 @@ function fmt(iso) {
       <div class="records">
         <div v-for="c in challenge.completed" :key="c.id" class="rec">
           <span>🧹 {{ c.ingredientName }} → 做了「{{ c.dishName }}」</span>
-          <span class="muted small">{{ fmt(c.date) }} · +{{ c.points }}积分</span>
+          <span class="muted small">
+            {{ fmt(c.date) }} · +{{ c.points }}积分
+            <template v-if="c.urgencyLabel">（{{ c.urgencyLabel }}<template v-if="c.bonus">+{{ c.bonus }}</template>）</template>
+          </span>
         </div>
       </div>
     </div>
@@ -130,6 +148,15 @@ function fmt(iso) {
 }
 .small {
   font-size: 12px;
+}
+.reward-tag {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 1px 8px;
+  border-radius: 10px;
+  background: var(--warn-light);
+  color: var(--warn);
+  font-weight: 600;
 }
 .dish-pick {
   display: flex;
